@@ -8,10 +8,10 @@ import (
 
 // validatePrefix coerces the environmental variable into a usable prefix, by adding a "/" if necessary or setting it to
 // the default prefix. It returns the coerced prefix
-func validatePrefix(photoPrefix string) string {
+func validatePrefix(photoPrefix string, defaultPrefix string) string {
 	if !strings.HasSuffix(photoPrefix, "/") {
 		if photoPrefix == "" {
-			photoPrefix = DefaultPrefix
+			photoPrefix = defaultPrefix
 		} else {
 			photoPrefix += "/"
 		}

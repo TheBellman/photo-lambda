@@ -69,7 +69,7 @@ var multiObject = `{
           "arn": "arn:aws:s3:::lambda-artifacts-deafc19498e3f2df"
         },
         "object": {
-          "Key": "photos/IMG_1700.jpeg",
+          "Key": "import/IMG_1700.jpeg",
           "size": 1305107,
           "eTag": "b21b84d653bb07b05b1e6b33684dc11b",
           "sequencer": "0C0F6F405D6ED209E1"

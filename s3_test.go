@@ -8,6 +8,7 @@ import (
 func Test_validatePrefix(t *testing.T) {
 	type args struct {
 		prefix string
+		defaultPrefix string
 	}
 
 	tests := []struct {
@@ -15,13 +16,13 @@ func Test_validatePrefix(t *testing.T) {
 		args args
 		want string
 	}{
-		{name: "simple", args: args{prefix: ""}, want: DefaultPrefix},
-		{name: "complex", args: args{prefix: "folder"}, want: "folder/"},
+		{name: "simple", args: args{prefix: "", defaultPrefix: DefaultSrcPrefix}, want: DefaultSrcPrefix},
+		{name: "complex", args: args{prefix: "folder", defaultPrefix: DefaultSrcPrefix}, want: "folder/"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validatePrefix(tt.args.prefix); got != tt.want {
+			if got := validatePrefix(tt.args.prefix, DefaultSrcPrefix); got != tt.want {
 				t.Errorf("extractName() = %v, want %v", got, tt.want)
 			}
 		})

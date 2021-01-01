@@ -25,15 +25,16 @@ type runtimeParameters struct {
 var params *runtimeParameters
 
 const (
-	DefaultPrefix = "photos/"
-	DefaultRegion = "eu-west-2"
-	DefaultBucket = "NOSUCHBUCKET"
+	DefaultRegion     = "eu-west-2"
+	DefaultSrcPrefix  = "import/"
+	DefaultDestPrefix = "photos/"
+	DefaultBucket     = "NOSUCHBUCKET"
 )
 
 func init() {
 	params = &runtimeParameters{
-		PhotoPrefix:       validatePrefix(os.Getenv("PHOTO_PREFIX")),
-		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX")),
+		PhotoPrefix:       validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
+		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
 	}
