@@ -2,22 +2,40 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"testing"
 )
 
-func testFileReader() io.ReadCloser {
-	f, err := os.Open("./test.jpeg")
+func testFile(name string) *[]byte {
+	data, err := ioutil.ReadAll(testFileReader(name))
 	if err != nil {
-		log.Fatal("Failed to open test jpeg")
+		log.Fatalf("Failed to read %s", name)
+	}
+	return &data
+}
+
+func testFileReader(name string) io.ReadCloser {
+	f, err := os.Open(name)
+	if err != nil {
+		log.Fatalf("Failed to open %s", name)
 	}
 	return f
 }
 
+func Test_getImage(t *testing.T) {
+	data, err := getImage(testFileReader("./test.jpeg"))
+	if err != nil {
+		t.Errorf("unexpected error loading file: %v", err)
+	}
+	if len(*data) == 0 {
+		t.Errorf("empty byte slice returned!")
+	}
+}
+
 func Test_getImgTimeStamp(t *testing.T) {
-	f := testFileReader()
-	tstamp, err := getImgTimeStamp(f)
+	tstamp, err := getImgTimeStamp(testFile("./test.jpeg"))
 	if err != nil {
 		t.Errorf("Failed to extract timestamp: %v", err)
 	}
@@ -26,4 +44,13 @@ func Test_getImgTimeStamp(t *testing.T) {
 	}
 }
 
+func Test_resizeImage(t *testing.T) {
+	img, err := resizeImage(testFile("./IMG_0348.jpeg"))
+	if err != nil {
+		t.Errorf("failed to resize image: %v", err)
+	}
 
+	if img == nil || len(*img) == 0 {
+		t.Error("did not receive an image when it was expected")
+	}
+}

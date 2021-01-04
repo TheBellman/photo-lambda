@@ -13,6 +13,10 @@ type mockS3 struct{}
 var jpegMime = "image/jpeg"
 var txtMime = "text/plain"
 
+func (f *mockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
+	return &s3.PutObjectOutput{}, nil
+}
+
 func (f *mockS3) DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
 	if *input.Key == "case3" {
 		return nil, fmt.Errorf("case3 should fail")
@@ -38,14 +42,14 @@ func (f *mockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error
 	if *input.Key == "key/good.jpeg" {
 		return &s3.GetObjectOutput{
 			ContentType: &jpegMime,
-			Body: testFileReader(),
+			Body:        testFileReader("./test.jpeg"),
 		}, nil
 	}
 
 	if *input.Key == "key/bad.jpeg" {
 		return &s3.GetObjectOutput{
 			ContentType: &txtMime,
-			Body: testFileReader(),
+			Body:        testFileReader("./test.jpeg"),
 		}, nil
 	}
 

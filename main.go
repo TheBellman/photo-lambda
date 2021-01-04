@@ -25,11 +25,13 @@ type runtimeParameters struct {
 var params *runtimeParameters
 
 const (
-	DefaultRegion     = "eu-west-2"
-	DefaultSrcPrefix  = "import/"
-	DefaultDestPrefix = "photos/"
-	DefaultBucket     = "NOSUCHBUCKET"
-	JPEG              = "image/jpeg"
+	DefaultRegion      = "eu-west-2"
+	DefaultSrcPrefix   = "import/"
+	DefaultDestPrefix  = "photos/"
+	DefaultThumbPrefix = "thumbs/"
+	DefaultBucket      = "NOSUCHBUCKET"
+	JPEG               = "image/jpeg"
+	ThumbnailSize      = 200
 )
 
 func init() {
@@ -107,8 +109,15 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 				continue
 			}
 
+			// extract the image data
+			imageBytes, err := getImage(imgReader)
+			if err != nil {
+				log.Printf("Failed to read image bytes: %v", err)
+			}
+			log.Printf("Read %d image bytes", len(*imageBytes))
+
 			// try to get the EXIF timestamp for the object
-			tstamp, err := getImgTimeStamp(imgReader)
+			tstamp, err := getImgTimeStamp(imageBytes)
 			if err != nil {
 				log.Printf("failed to obtain timestamp: %v", err)
 				continue
@@ -117,13 +126,22 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			// use the EXIF timestamp and the supplied key to create a destination key
 			newKey := makeNewKey(decodedKey, tstamp)
 
+			// move the original object to it's new location
 			err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey)
 			if err != nil {
 				log.Printf("failed to move object: %v", err)
 				continue
 			}
-			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
 
+			// create a thumbnail from our image bytes, getting back a *byte[]
+			thumbBytes, err := resizeImage(imageBytes)
+			if err != nil {
+				log.Printf("failed to create a thumbnail image: %v", err)
+			}
+
+			err = saveImage(params.S3service, thumbBytes, params.DestinationBucket, strings.Replace(newKey, params.PhotoPrefix, DefaultThumbPrefix, 1))
+
+			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
 			cnt++
 		}
 	}

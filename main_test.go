@@ -29,7 +29,7 @@ func Test_validateRegion(t *testing.T) {
 
 func Test_validatePrefix(t *testing.T) {
 	type args struct {
-		prefix string
+		prefix        string
 		defaultPrefix string
 	}
 
