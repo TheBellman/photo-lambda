@@ -29,6 +29,7 @@ const (
 	DefaultSrcPrefix  = "import/"
 	DefaultDestPrefix = "photos/"
 	DefaultBucket     = "NOSUCHBUCKET"
+	JPEG              = "image/jpeg"
 )
 
 func init() {
@@ -58,6 +59,19 @@ func validateRegion(region string) string {
 	}
 }
 
+// validatePrefix coerces the environmental variable into a usable prefix, by adding a "/" if necessary or setting it to
+// the default prefix. It returns the coerced prefix
+func validatePrefix(photoPrefix string, defaultPrefix string) string {
+	if !strings.HasSuffix(photoPrefix, "/") {
+		if photoPrefix == "" {
+			photoPrefix = defaultPrefix
+		} else {
+			photoPrefix += "/"
+		}
+	}
+	return photoPrefix
+}
+
 // validateDestination will ensure a non-blank destination bucket
 func validateDestination(bucket string) string {
 	if bucket == "" {
@@ -72,26 +86,43 @@ func validateDestination(bucket string) string {
 func HandleLambdaEvent(request events.S3Event) (int, error) {
 	cnt := 0
 	for _, event := range request.Records {
+		// only process events where the object key as the expected prefix and the event is an object creation
 		if strings.HasPrefix(event.S3.Object.Key, params.PhotoPrefix) && strings.HasPrefix(event.EventName, "ObjectCreated:") {
 			decodedKey, err := url.QueryUnescape(event.S3.Object.Key)
 			if err != nil {
 				log.Printf("Failed to decode the key: '%s'", event.S3.Object.Key)
-				break
+				continue
 			}
 
+			// this should be a cannot-happen case
 			if event.AWSRegion != params.Region {
 				log.Printf("Event is not from the same region as the lambda: got %q, wanted %q", event.AWSRegion, params.Region)
-				break
+				continue
 			}
 
-			tstamp, err := getImgTimeStamp(event.S3.Bucket.Name, decodedKey)
+			// fetch the object and hand back an io.reader
+			imgReader, err := getImageReader(params.S3service, event.S3.Bucket.Name, decodedKey)
+			if err != nil {
+				log.Printf("Failed to get a reader to read from %s/%s: %v", event.S3.Bucket.Name, decodedKey, err)
+				continue
+			}
+
+			// try to get the EXIF timestamp for the object
+			tstamp, err := getImgTimeStamp(imgReader)
 			if err != nil {
 				log.Printf("failed to obtain timestamp: %v", err)
-				break
+				continue
 			}
 
+			// use the EXIF timestamp and the supplied key to create a destination key
 			newKey := makeNewKey(decodedKey, tstamp)
-			log.Printf("Processing request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
+
+			err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey)
+			if err != nil {
+				log.Printf("failed to move object: %v", err)
+				continue
+			}
+			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
 
 			cnt++
 		}

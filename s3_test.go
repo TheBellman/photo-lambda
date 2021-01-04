@@ -1,32 +1,55 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"testing"
 	"time"
 )
 
-func Test_validatePrefix(t *testing.T) {
-	type args struct {
-		prefix string
-		defaultPrefix string
+type mockS3 struct{}
+
+var jpegMime = "image/jpeg"
+var txtMime = "text/plain"
+
+func (f *mockS3) DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
+	if *input.Key == "case3" {
+		return nil, fmt.Errorf("case3 should fail")
+	}
+	return &s3.DeleteObjectOutput{}, nil
+}
+
+func (f *mockS3) WaitUntilObjectExists(input *s3.HeadObjectInput) error {
+	if *input.Key == "case2" {
+		return fmt.Errorf("case2 should fail")
+	}
+	return nil
+}
+
+func (f *mockS3) CopyObject(input *s3.CopyObjectInput) (*s3.CopyObjectOutput, error) {
+	if *input.Key == "case1" {
+		return nil, fmt.Errorf("case1 should fail")
+	}
+	return &s3.CopyObjectOutput{}, nil
+}
+
+func (f *mockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	if *input.Key == "key/good.jpeg" {
+		return &s3.GetObjectOutput{
+			ContentType: &jpegMime,
+			Body: testFileReader(),
+		}, nil
 	}
 
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{name: "simple", args: args{prefix: "", defaultPrefix: DefaultSrcPrefix}, want: DefaultSrcPrefix},
-		{name: "complex", args: args{prefix: "folder", defaultPrefix: DefaultSrcPrefix}, want: "folder/"},
+	if *input.Key == "key/bad.jpeg" {
+		return &s3.GetObjectOutput{
+			ContentType: &txtMime,
+			Body: testFileReader(),
+		}, nil
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := validatePrefix(tt.args.prefix, DefaultSrcPrefix); got != tt.want {
-				t.Errorf("extractName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	return nil, errors.New("unexpected test key provided")
 }
 
 func Test_makeNewKey(t *testing.T) {
@@ -76,4 +99,45 @@ func Test_extractName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getImageReader(t *testing.T) {
+	mock := mockS3{}
+	_, err := getImageReader(&mock, "bucket", "key/good.jpeg")
+	if err != nil {
+		t.Errorf("Received an unexpected error: %v", err)
+	}
+
+	_, err = getImageReader(&mock, "bucket", "key/bad.jpeg")
+	if err == nil {
+		t.Errorf("Did not get an error when expected")
+	}
+}
+
+func Test_moveObject(t *testing.T) {
+	mock := mockS3{}
+	// case 1 - copy failed, expect error
+	err := moveObject(&mock, "sourceBucket", "sourceKey", "destBucket", "case1")
+	if err == nil {
+		t.Errorf("Did not get an error for copy failure when one was expected")
+	}
+
+	// case 2 - wait failed, expect error
+	err = moveObject(&mock, "sourceBucket", "sourceKey", "destBucket", "case2")
+	if err == nil {
+		t.Errorf("Did not get an error for wait failure when one was expected")
+	}
+
+	// case 3 - delete failed, expect error
+	err = moveObject(&mock, "sourceBucket", "case3", "destBucket", "destKey")
+	if err == nil {
+		t.Errorf("Did not get an error for delete failure when one was expected")
+	}
+
+	// case 4 - no failures, expect no errors
+	err = moveObject(&mock, "sourceBucket", "sourceKey", "destBucket", "case4")
+	if err != nil {
+		t.Errorf("Got an unexpected error for the no-fail case: %v", err)
+	}
+
 }
