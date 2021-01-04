@@ -82,6 +82,17 @@ func Test_makeNewKey(t *testing.T) {
 	}
 }
 
+
+func Test_makeThumbKey(t *testing.T) {
+	key := "photos/2020/12/23/fred"
+	want := "thumbs/2020/12/23/fred"
+	if got := makeThumbKey(key); got != want {
+		t.Errorf("got: %q, want %q", got, want)
+	}
+}
+
+
+
 func Test_extractName(t *testing.T) {
 	type args struct {
 		key string

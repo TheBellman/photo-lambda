@@ -30,6 +30,11 @@ func extractName(key string) string {
 	return filepath.Base(key)
 }
 
+// makeThumbKey should replace the old prefix on the key with the new thumbnail prefix
+func makeThumbKey(key string) string {
+	return strings.Replace(key, params.DestinationPrefix, DefaultThumbPrefix, 1)
+}
+
 // makeNewKey will assemble the target key for a provided incoming object key, and the timestamp
 func makeNewKey(key string, tstamp *time.Time) string {
 	return params.DestinationPrefix + tstamp.Format("2006/01/02/") + extractName(key)

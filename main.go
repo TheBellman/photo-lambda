@@ -15,7 +15,7 @@ import (
 
 // photoPrefix contains the prefix we expect all keys to have if they are of interest
 type runtimeParameters struct {
-	PhotoPrefix       string
+	SourcePrefix      string
 	DestinationPrefix string
 	DestinationBucket string
 	Region            string
@@ -36,7 +36,7 @@ const (
 
 func init() {
 	params = &runtimeParameters{
-		PhotoPrefix:       validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
+		SourcePrefix:      validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
@@ -89,7 +89,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 	cnt := 0
 	for _, event := range request.Records {
 		// only process events where the object key as the expected prefix and the event is an object creation
-		if strings.HasPrefix(event.S3.Object.Key, params.PhotoPrefix) && strings.HasPrefix(event.EventName, "ObjectCreated:") {
+		if strings.HasPrefix(event.S3.Object.Key, params.SourcePrefix) && strings.HasPrefix(event.EventName, "ObjectCreated:") {
 			decodedKey, err := url.QueryUnescape(event.S3.Object.Key)
 			if err != nil {
 				log.Printf("Failed to decode the key: '%s'", event.S3.Object.Key)
@@ -114,7 +114,6 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			if err != nil {
 				log.Printf("Failed to read image bytes: %v", err)
 			}
-			log.Printf("Read %d image bytes", len(*imageBytes))
 
 			// try to get the EXIF timestamp for the object
 			tstamp, err := getImgTimeStamp(imageBytes)
@@ -137,9 +136,12 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			thumbBytes, err := resizeImage(imageBytes)
 			if err != nil {
 				log.Printf("failed to create a thumbnail image: %v", err)
+				continue
 			}
 
-			err = saveImage(params.S3service, thumbBytes, params.DestinationBucket, strings.Replace(newKey, params.PhotoPrefix, DefaultThumbPrefix, 1))
+			if err = saveImage(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
+				log.Printf("failed to save the thumbnail: %v", err)
+			}
 
 			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
 			cnt++
