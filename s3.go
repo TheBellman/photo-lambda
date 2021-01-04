@@ -73,8 +73,6 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 	// delete the original object
 	_, err = service.DeleteObject(&s3.DeleteObjectInput{
 		Bucket:                    aws.String(srcBucket),
-		BypassGovernanceRetention: aws.Bool(true),
-		ExpectedBucketOwner:       nil,
 		Key:                       aws.String(srcKey),
 	})
 	if err != nil {
