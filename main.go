@@ -88,6 +88,8 @@ func validateDestination(bucket string) string {
 func HandleLambdaEvent(request events.S3Event) (int, error) {
 	cnt := 0
 	for _, event := range request.Records {
+
+		log.Printf("Received request for : object %s/%s", event.S3.Bucket.Name, event.S3.Object.Key)
 		// only process events where the object key as the expected prefix and the event is an object creation
 		if strings.HasPrefix(event.S3.Object.Key, params.SourcePrefix) && strings.HasPrefix(event.EventName, "ObjectCreated:") {
 			decodedKey, err := url.QueryUnescape(event.S3.Object.Key)
