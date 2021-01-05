@@ -139,7 +139,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 				continue
 			}
 
-			if err = saveImage(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
+			if err = saveThumbnail(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
 				log.Printf("failed to save the thumbnail: %v", err)
 			}
 

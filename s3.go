@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io"
-	"log"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -67,9 +66,10 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 
 	// copy the object to the new location
 	_, err := service.CopyObject(&s3.CopyObjectInput{
-		Bucket:     aws.String(destBucket),
-		Key:        aws.String(destKey),
-		CopySource: aws.String(url.PathEscape(fmt.Sprintf("%s/%s", srcBucket, srcKey))),
+		Bucket:       aws.String(destBucket),
+		Key:          aws.String(destKey),
+		CopySource:   aws.String(url.PathEscape(fmt.Sprintf("%s/%s", srcBucket, srcKey))),
+		StorageClass: aws.String("Standard-IA"),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to copy object to destination: %v", err)
@@ -96,18 +96,17 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 	return nil
 }
 
-// saveImage tries to save the supplied data to the desired bucket and key.
-func saveImage(service s3Service, data *[]byte, bucket string, key string) error {
+// saveThumbnail tries to save the supplied data to the desired bucket and key.
+func saveThumbnail(service s3Service, data *[]byte, bucket string, key string) error {
 	reader := bytes.NewReader(*data)
-	result, err := service.PutObject(&s3.PutObjectInput{
+	_, err := service.PutObject(&s3.PutObjectInput{
 		Body:          reader,
 		Bucket:        aws.String(bucket),
 		ContentLength: aws.Int64(int64(len(*data))),
 		ContentType:   aws.String(JPEG),
 		Key:           aws.String(key),
+		StorageClass:  aws.String("Standard-IA"),
 	})
-
-	log.Printf("Thumbnail PutObject() result: %v", result)
 
 	return err
 }
