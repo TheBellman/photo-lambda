@@ -69,7 +69,7 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 		Bucket:       aws.String(destBucket),
 		Key:          aws.String(destKey),
 		CopySource:   aws.String(url.PathEscape(fmt.Sprintf("%s/%s", srcBucket, srcKey))),
-		StorageClass: aws.String("Standard-IA"),
+		StorageClass: aws.String("STANDARD_IA"),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to copy object to destination: %v", err)
@@ -105,7 +105,6 @@ func saveThumbnail(service s3Service, data *[]byte, bucket string, key string) e
 		ContentLength: aws.Int64(int64(len(*data))),
 		ContentType:   aws.String(JPEG),
 		Key:           aws.String(key),
-		StorageClass:  aws.String("Standard-IA"),
 	})
 
 	return err
