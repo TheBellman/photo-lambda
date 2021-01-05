@@ -47,7 +47,7 @@ func getImageReader(service s3Service, bucket string, key string) (io.Reader, er
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error fetchign from s3: %v", err)
+		return nil, fmt.Errorf("error fetching from s3: %v", err)
 	}
 
 	if *result.ContentType != JPEG {

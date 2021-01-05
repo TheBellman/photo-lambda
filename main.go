@@ -113,6 +113,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			imageBytes, err := getImage(imgReader)
 			if err != nil {
 				log.Printf("Failed to read image bytes: %v", err)
+				continue
 			}
 
 			// try to get the EXIF timestamp for the object
@@ -141,6 +142,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 
 			if err = saveThumbnail(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
 				log.Printf("failed to save the thumbnail: %v", err)
+				continue
 			}
 
 			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
