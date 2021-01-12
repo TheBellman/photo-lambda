@@ -16,7 +16,7 @@ type secretService interface {
 // getWasabiSecret tries to use the supplied session to retrieve the wasabi secret values
 func getWasabiSecret(client secretService) (key string, secret string, err error) {
 	result, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(WasabiSecret),
+		SecretId: aws.String(WasabiSecret),
 	})
 	if err != nil {
 		return "", "", fmt.Errorf("failed to read the wasabi secret  %v", err)

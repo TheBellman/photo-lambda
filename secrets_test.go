@@ -9,16 +9,16 @@ type mockClient struct{}
 
 var secret = "{\"ACCESS_KEY_ID\": \"key\", \"SECRET_ACCESS_KEY\": \"secret\"}"
 
-func (f *mockClient)GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+func (f *mockClient) GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
 	return &secretsmanager.GetSecretValueOutput{
-		SecretString:  &secret,
-	} , nil
+		SecretString: &secret,
+	}, nil
 }
 
 func Test_getWasabiSecret(t *testing.T) {
 	mock := mockClient{}
 	key, secret, err := getWasabiSecret(&mock)
-	if err!= nil {
+	if err != nil {
 		t.Errorf("getWasabiSecret() : %v", err)
 	}
 

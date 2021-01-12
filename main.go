@@ -21,9 +21,9 @@ type runtimeParameters struct {
 	Session           *session.Session
 	S3service         *s3.S3
 	WasabiService     *s3.S3
-	WasabiKey		  string
+	WasabiKey         string
 	WasabiSecret      string
-	WasabiRegion	  string
+	WasabiRegion      string
 	WasabiBucket      string
 }
 
@@ -46,6 +46,8 @@ func init() {
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
+		WasabiBucket:      validateDestination(os.Getenv("WASABI_BUCKET")),
+		WasabiRegion:      validateRegion(os.Getenv("WASABI_REGION")),
 	}
 
 	sess, err := session.NewSession(&aws.Config{

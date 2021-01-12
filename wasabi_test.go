@@ -6,10 +6,10 @@ import (
 
 func Test_makeWasabiConfig(t *testing.T) {
 	params := &runtimeParameters{
-		WasabiKey:         "theKey",
-		WasabiSecret:      "theSecret",
-		WasabiRegion:      "eu-central-1",
-		WasabiBucket:      "theBucket",
+		WasabiKey:    "theKey",
+		WasabiSecret: "theSecret",
+		WasabiRegion: "eu-central-1",
+		WasabiBucket: "theBucket",
 	}
 
 	result := makeWasabiConfig(params)
@@ -25,17 +25,17 @@ func Test_makeWasabiConfig(t *testing.T) {
 		t.Errorf("makeWasabiConfig() incorrect endpoint %q set", *result.Endpoint)
 	}
 
-	if result.Credentials == nil  {
+	if result.Credentials == nil {
 		t.Error("makeWasabiConfig() did not set credentials")
 	}
 }
 
 func Test_makeWasabiClient(t *testing.T) {
 	params := &runtimeParameters{
-		WasabiKey:         "theKey",
-		WasabiSecret:      "theSecret",
-		WasabiRegion:      "eu-central-1",
-		WasabiBucket:      "theBucket",
+		WasabiKey:    "theKey",
+		WasabiSecret: "theSecret",
+		WasabiRegion: "eu-central-1",
+		WasabiBucket: "theBucket",
 	}
 
 	result, err := makeWasabiClient(params)
