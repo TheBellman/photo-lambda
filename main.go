@@ -13,13 +13,14 @@ import (
 	"strings"
 )
 
-// photoPrefix contains the prefix we expect all keys to have if they are of interest
 type runtimeParameters struct {
 	SourcePrefix      string
 	DestinationPrefix string
 	DestinationBucket string
 	Region            string
 	S3service         *s3.S3
+	WasabiKey		  string
+	WasabiSecret      string
 }
 
 var params *runtimeParameters
@@ -32,6 +33,7 @@ const (
 	DefaultBucket      = "NOSUCHBUCKET"
 	JPEG               = "image/jpeg"
 	ThumbnailSize      = 200
+	WasabiSecret       = "wasabi-access"
 )
 
 func init() {
@@ -49,7 +51,16 @@ func init() {
 		log.Fatal("Error starting session", err)
 	}
 
+	key, secret, err := getWasabiSecret(sess)
+	if err != nil {
+		log.Fatal("Failed to fetch Wasabi secrets", err)
+	}
+	params.WasabiKey = key
+	params.WasabiSecret = secret
+
+
 	params.S3service = s3.New(sess)
+
 }
 
 // validateRegion will provide the default region if no region is set
