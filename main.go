@@ -18,6 +18,7 @@ type runtimeParameters struct {
 	DestinationPrefix string
 	DestinationBucket string
 	Region            string
+	Session           *session.Session
 	S3service         *s3.S3
 	WasabiKey		  string
 	WasabiSecret      string
@@ -50,17 +51,8 @@ func init() {
 	if err != nil {
 		log.Fatal("Error starting session", err)
 	}
-
-	key, secret, err := getWasabiSecret(sess)
-	if err != nil {
-		log.Fatal("Failed to fetch Wasabi secrets", err)
-	}
-	params.WasabiKey = key
-	params.WasabiSecret = secret
-
-
+	params.Session = sess
 	params.S3service = s3.New(sess)
-
 }
 
 // validateRegion will provide the default region if no region is set
@@ -97,6 +89,9 @@ func validateDestination(bucket string) string {
 // HandleLambdaEvent takes care of processing the incoming S3 event. Only "ObjectCreated:*" events are processed, and only
 // for where the object key starts with the nominated prefix. The count of processed objects is returned
 func HandleLambdaEvent(request events.S3Event) (int, error) {
+	// try to do a lazy fetch of the wasabi secret.
+	lazyGetSecret()
+
 	cnt := 0
 	for _, event := range request.Records {
 

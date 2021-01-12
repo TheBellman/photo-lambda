@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"log"
 )
 
+// secretService helps with mocking access to secrets manager
+type secretService interface {
+	GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+}
+
 // getWasabiSecret tries to use the supplied session to retrieve the wasabi secret values
-func getWasabiSecret(sess *session.Session) (key string, secret string, err error) {
-	client := secretsmanager.New(sess)
+func getWasabiSecret(client secretService) (key string, secret string, err error) {
 	result, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(WasabiSecret),
 	})
@@ -25,4 +29,17 @@ func getWasabiSecret(sess *session.Session) (key string, secret string, err erro
 	}
 
 	return values["ACCESS_KEY_ID"], values["SECRET_ACCESS_KEY"], nil
+}
+
+// lazyGetSecret tries to fetch the wasabi secret values only if they are not already in the parameters
+func lazyGetSecret() {
+	if params.WasabiSecret == "" {
+		key, secret, err := getWasabiSecret(secretsmanager.New(params.Session))
+		if err != nil {
+			log.Fatal("Failed to fetch Wasabi secrets", err)
+		}
+		params.WasabiKey = key
+		params.WasabiSecret = secret
+		log.Printf("Successfully fetched Wasabi secret [%s]", key)
+	}
 }
