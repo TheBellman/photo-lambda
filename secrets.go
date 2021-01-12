@@ -32,7 +32,7 @@ func getWasabiSecret(client secretService) (key string, secret string, err error
 }
 
 // lazyGetSecret tries to fetch the wasabi secret values only if they are not already in the parameters
-func lazyGetSecret() {
+func lazyGetSecret(params *runtimeParameters) {
 	if params.WasabiSecret == "" {
 		key, secret, err := getWasabiSecret(secretsmanager.New(params.Session))
 		if err != nil {
