@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -45,4 +46,24 @@ func makeLazyWasabiClient(params *runtimeParameters) {
 		}
 		params.WasabiService = client
 	}
+}
+
+// saveToWasabi uses the current configuration to write the supplied image bytes to the target key
+func saveToWasabi(params *runtimeParameters, image *[]byte, key string) error {
+	if params.WasabiService == nil {
+		return fmt.Errorf("no service has been provided to write to wasabi")
+	}
+
+	result, err := params.WasabiService.PutObject(&s3.PutObjectInput{
+		Body:                      bytes.NewReader(*image),
+		Bucket:                    aws.String(params.WasabiBucket),
+		ContentType:               aws.String(JPEG),
+		Key:                       aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("writing to wasabi failed: %v", err)
+	}
+	log.Printf("copied to wasabi %q with etag %q", key, *result.ETag)
+
+	return nil
 }

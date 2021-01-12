@@ -137,8 +137,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			newKey := makeNewKey(decodedKey, tstamp)
 
 			// move the original object to it's new location
-			err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey)
-			if err != nil {
+			if err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey); err != nil {
 				log.Printf("failed to move object: %v", err)
 				continue
 			}
@@ -152,6 +151,11 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 
 			if err = saveThumbnail(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
 				log.Printf("failed to save the thumbnail: %v", err)
+				continue
+			}
+
+			if err = saveToWasabi(params, imageBytes, newKey); err != nil {
+				log.Printf("failed to copy to wasabi: %v", err)
 				continue
 			}
 
