@@ -43,14 +43,3 @@ func Test_getImgTimeStamp(t *testing.T) {
 		t.Errorf("Received a nil timestamp")
 	}
 }
-
-func Test_resizeImage(t *testing.T) {
-	img, err := resizeImage(testFile("./IMG_0348.jpeg"))
-	if err != nil {
-		t.Errorf("failed to resize image: %v", err)
-	}
-
-	if img == nil || len(*img) == 0 {
-		t.Error("did not receive an image when it was expected")
-	}
-}

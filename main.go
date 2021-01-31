@@ -2,15 +2,19 @@
 package main
 
 import (
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"io"
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 type runtimeParameters struct {
@@ -20,11 +24,15 @@ type runtimeParameters struct {
 	Region            string
 	Session           *session.Session
 	S3service         *s3.S3
-	WasabiService     *s3.S3
-	WasabiKey         string
-	WasabiSecret      string
-	WasabiRegion      string
-	WasabiBucket      string
+}
+
+// s3Service helps with mocking access to S3
+type s3Service interface {
+	GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error)
+	CopyObject(input *s3.CopyObjectInput) (*s3.CopyObjectOutput, error)
+	WaitUntilObjectExists(input *s3.HeadObjectInput) error
+	DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error)
+	PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error)
 }
 
 var params *runtimeParameters
@@ -36,8 +44,6 @@ const (
 	DefaultThumbPrefix = "thumbs/"
 	DefaultBucket      = "NOSUCHBUCKET"
 	JPEG               = "image/jpeg"
-	ThumbnailSize      = 200
-	WasabiSecret       = "wasabi-access"
 )
 
 func init() {
@@ -46,18 +52,7 @@ func init() {
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
-		WasabiBucket:      validateDestination(os.Getenv("WASABI_BUCKET")),
-		WasabiRegion:      validateRegion(os.Getenv("WASABI_REGION")),
 	}
-
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(params.Region),
-	})
-	if err != nil {
-		log.Fatal("Error starting session", err)
-	}
-	params.Session = sess
-	params.S3service = s3.New(sess)
 }
 
 // validateRegion will provide the default region if no region is set
@@ -91,11 +86,79 @@ func validateDestination(bucket string) string {
 	}
 }
 
+// makeNewKey will assemble the target key for a provided incoming object key, and the timestamp
+func makeNewKey(key string, tstamp *time.Time) string {
+	return params.DestinationPrefix + tstamp.Format("2006/01/02/") + extractName(key)
+}
+
+// extractName gets the last part of the S3 key
+func extractName(key string) string {
+	if key == "" || strings.HasSuffix(key, "/") {
+		return ""
+	}
+	return filepath.Base(key)
+}
+
+// getImageReader tries to get an io.Reader exposing the body of an image given the bucket and key. It will fail
+// if the provided object is not a JPEG
+func getImageReader(service s3Service, bucket string, key string) (io.Reader, error) {
+	result, err := service.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error fetching from s3: %v", err)
+	}
+
+	if *result.ContentType != JPEG {
+		return nil, fmt.Errorf("only JPEG supported, fetched file was reported as %s", *result.ContentType)
+	}
+
+	return result.Body, nil
+}
+
+// moveObject uses the supplied service to move an object from a source bucket/key to a destination bucket/key
+func moveObject(service s3Service, srcBucket string, srcKey string, destBucket string, destKey string) error {
+	// silently do nothing if asked to move nowhere
+	if srcBucket == destBucket && srcKey == destKey {
+		return nil
+	}
+
+	// copy the object to the new location
+	_, err := service.CopyObject(&s3.CopyObjectInput{
+		Bucket:       aws.String(destBucket),
+		Key:          aws.String(destKey),
+		CopySource:   aws.String(url.PathEscape(fmt.Sprintf("%s/%s", srcBucket, srcKey))),
+		StorageClass: aws.String("STANDARD_IA"),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to copy object to destination: %v", err)
+	}
+
+	// verify it is there. looking at the source code, this has a comfortable retry and wait behaviour
+	err = service.WaitUntilObjectExists(&s3.HeadObjectInput{
+		Bucket: aws.String(destBucket),
+		Key:    aws.String(destKey),
+	})
+	if err != nil {
+		return fmt.Errorf("object was not available in the bucket after copying: %v", err)
+	}
+
+	// delete the original object
+	_, err = service.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(srcBucket),
+		Key:    aws.String(srcKey),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete original object after copying: %v", err)
+	}
+
+	return nil
+}
+
 // HandleLambdaEvent takes care of processing the incoming S3 event. Only "ObjectCreated:*" events are processed, and only
 // for where the object key starts with the nominated prefix. The count of processed objects is returned
 func HandleLambdaEvent(request events.S3Event) (int, error) {
-	makeLazyWasabiClient(params)
-
 	cnt := 0
 	for _, event := range request.Records {
 
@@ -144,23 +207,6 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 				continue
 			}
 
-			// create a thumbnail from our image bytes, getting back a *byte[]
-			thumbBytes, err := resizeImage(imageBytes)
-			if err != nil {
-				log.Printf("failed to create a thumbnail image: %v", err)
-				continue
-			}
-
-			if err = saveThumbnail(params.S3service, thumbBytes, params.DestinationBucket, makeThumbKey(newKey)); err != nil {
-				log.Printf("failed to save the thumbnail: %v", err)
-				continue
-			}
-
-			if err = saveToWasabi(params, imageBytes, newKey); err != nil {
-				log.Printf("failed to copy to wasabi: %v", err)
-				continue
-			}
-
 			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
 			cnt++
 		}
@@ -171,6 +217,15 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 
 // main function invoked when the lambda is launched
 func main() {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(params.Region),
+	})
+	if err != nil {
+		log.Fatal("Error starting session", err)
+	}
+	params.Session = sess
+	params.S3service = s3.New(sess)
+
 	log.Println("Registering handler...")
 	lambda.Start(HandleLambdaEvent)
 }
