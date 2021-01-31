@@ -41,7 +41,6 @@ const (
 	DefaultRegion      = "eu-west-2"
 	DefaultSrcPrefix   = "import/"
 	DefaultDestPrefix  = "photos/"
-	DefaultThumbPrefix = "thumbs/"
 	DefaultBucket      = "NOSUCHBUCKET"
 	JPEG               = "image/jpeg"
 )
@@ -226,6 +225,6 @@ func main() {
 	params.Session = sess
 	params.S3service = s3.New(sess)
 
-	log.Println("Registering handler...")
+	log.Println("Registering handler for photo-lambda...")
 	lambda.Start(HandleLambdaEvent)
 }
