@@ -36,6 +36,7 @@ type s3Service interface {
 }
 
 var params *runtimeParameters
+var buildStamp string
 
 const (
 	DefaultRegion      = "eu-west-2"
@@ -46,6 +47,7 @@ const (
 )
 
 func init() {
+	buildStamp = os.Getenv("BUILD_STAMP")
 	params = &runtimeParameters{
 		SourcePrefix:      validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
@@ -161,39 +163,39 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 	cnt := 0
 	for _, event := range request.Records {
 
-		log.Printf("Received request for : object %s/%s", event.S3.Bucket.Name, event.S3.Object.Key)
+		log.Printf("[%s] Received request for : object %s/%s", buildStamp, event.S3.Bucket.Name, event.S3.Object.Key)
 		// only process events where the object key as the expected prefix and the event is an object creation
 		if strings.HasPrefix(event.S3.Object.Key, params.SourcePrefix) && strings.HasPrefix(event.EventName, "ObjectCreated:") {
 			decodedKey, err := url.QueryUnescape(event.S3.Object.Key)
 			if err != nil {
-				log.Printf("Failed to decode the key: '%s'", event.S3.Object.Key)
+				log.Printf("[%s] Failed to decode the key: '%s'", buildStamp, event.S3.Object.Key)
 				continue
 			}
 
 			// this should be a cannot-happen case
 			if event.AWSRegion != params.Region {
-				log.Printf("Event is not from the same region as the lambda: got %q, wanted %q", event.AWSRegion, params.Region)
+				log.Printf("[%s] Event is not from the same region as the lambda: got %q, wanted %q", buildStamp, event.AWSRegion, params.Region)
 				continue
 			}
 
 			// fetch the object and hand back an io.reader
 			imgReader, err := getImageReader(params.S3service, event.S3.Bucket.Name, decodedKey)
 			if err != nil {
-				log.Printf("Failed to get a reader to read from %s/%s: %v", event.S3.Bucket.Name, decodedKey, err)
+				log.Printf("[%s] Failed to get a reader to read from %s/%s: %v", buildStamp, event.S3.Bucket.Name, decodedKey, err)
 				continue
 			}
 
 			// extract the image data
 			imageBytes, err := getImage(imgReader)
 			if err != nil {
-				log.Printf("Failed to read image bytes: %v", err)
+				log.Printf("[%s] Failed to read image bytes: %v", buildStamp, err)
 				continue
 			}
 
 			// try to get the EXIF timestamp for the object
 			tstamp, err := getImgTimeStamp(imageBytes)
 			if err != nil {
-				log.Printf("failed to obtain timestamp: %v", err)
+				log.Printf("[%s] failed to obtain timestamp: %v", buildStamp, err)
 				continue
 			}
 
@@ -202,11 +204,11 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 
 			// move the original object to it's new location
 			if err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey); err != nil {
-				log.Printf("failed to move object: %v", err)
+				log.Printf("[%s] failed to move object: %v", buildStamp, err)
 				continue
 			}
 
-			log.Printf("Processed request for : object %s/%s -> %s", event.S3.Bucket.Name, decodedKey, newKey)
+			log.Printf("[%s] Processed request for : object %s/%s -> %s", buildStamp, event.S3.Bucket.Name, decodedKey, newKey)
 			cnt++
 		}
 	}
@@ -225,6 +227,6 @@ func main() {
 	params.Session = sess
 	params.S3service = s3.New(sess)
 
-	log.Println("Registering handler for photo-lambda...")
+	log.Printf("[%s] Registering handler for photo-lambda...", buildStamp)
 	lambda.Start(HandleLambdaEvent)
 }
