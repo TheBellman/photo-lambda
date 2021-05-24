@@ -89,15 +89,9 @@ func validateDestination(bucket string) string {
 
 // makeNewKey will assemble the target key for a provided incoming object key, and the timestamp
 func makeNewKey(key string, tstamp *time.Time) string {
-	return params.DestinationPrefix + tstamp.Format("2006/01/02/") + extractName(key)
-}
-
-// extractName gets the last part of the S3 key
-func extractName(key string) string {
-	if key == "" || strings.HasSuffix(key, "/") {
-		return ""
-	}
-	return filepath.Base(key)
+	var dir, name = filepath.Split(key)
+	dir = strings.TrimPrefix(dir, params.SourcePrefix)
+	return params.DestinationPrefix + dir + tstamp.Format("2006/01/02/") + name
 }
 
 // getImageReader tries to get an io.Reader exposing the body of an image given the bucket and key. It will fail

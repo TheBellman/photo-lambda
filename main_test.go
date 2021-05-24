@@ -140,36 +140,15 @@ func Test_makeNewKey(t *testing.T) {
 		args args
 		want string
 	}{
-		{name: "simple", args: args{key: "fred", tstamp: &stamp}, want: "photos/2020/12/23/fred"},
-		{name: "complex", args: args{key: "folder/subfolder/mary", tstamp: &stamp}, want: "photos/2020/12/23/mary"},
+		{name: "simple", args: args{key: "import/fred", tstamp: &stamp}, want: "photos/2020/12/23/fred"},
+		{name: "robert", args: args{key: "import/robert/img2.jpg", tstamp: &stamp}, want: "photos/robert/2020/12/23/img2.jpg"},
+		{name: "delia", args: args{key: "import/delia/img1.jpg", tstamp: &stamp}, want: "photos/delia/2020/12/23/img1.jpg"},
+		{name: "complex", args: args{key: "import/folder/subfolder/mary", tstamp: &stamp}, want: "photos/folder/subfolder/2020/12/23/mary"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := makeNewKey(tt.args.key, tt.args.tstamp); got != tt.want {
-				t.Errorf("extractName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_extractName(t *testing.T) {
-	type args struct {
-		key string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{name: "empty", args: args{key: ""}, want: ""},
-		{name: "simple", args: args{key: "fred"}, want: "fred"},
-		{name: "complex", args: args{key: "fred/mary"}, want: "mary"},
-		{name: "weird", args: args{key: "fred/mary/"}, want: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := extractName(tt.args.key); got != tt.want {
 				t.Errorf("extractName() = %v, want %v", got, tt.want)
 			}
 		})
