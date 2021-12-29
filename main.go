@@ -163,7 +163,7 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 func saveErrorObject(bucket string, objectKey string, decodedKey string) {
 	errKey := makeErrKey(decodedKey)
 	if err := moveObject(params.S3service, bucket, objectKey, bucket, errKey); err != nil {
-		log.Printf("[%s] failed to save error object: %v", buildStamp, err)
+		log.Printf("[%s] failed to move object to error location: %v", buildStamp, err)
 	}
 }
 
