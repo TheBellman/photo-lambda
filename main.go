@@ -159,6 +159,14 @@ func moveObject(service s3Service, srcBucket string, srcKey string, destBucket s
 	return nil
 }
 
+// saveErrorObject tries to preserve an input object into an error folder
+func saveErrorObject(bucket string, objectKey string, decodedKey string) {
+	errKey := makeErrKey(decodedKey)
+	if err := moveObject(params.S3service, bucket, objectKey, bucket, errKey); err != nil {
+		log.Printf("[%s] failed to save error object: %v", buildStamp, err)
+	}
+}
+
 // HandleLambdaEvent takes care of processing the incoming S3 event. Only "ObjectCreated:*" events are processed, and only
 // for where the object key starts with the nominated prefix. The count of processed objects is returned
 func HandleLambdaEvent(request events.S3Event) (int, error) {
@@ -173,6 +181,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 				log.Printf("[%s] Failed to decode the key: '%s'", buildStamp, event.S3.Object.Key)
 				continue
 			}
+
 
 			// this should be a cannot-happen case
 			if event.AWSRegion != params.Region {
@@ -191,6 +200,7 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			imageBytes, err := getImage(imgReader)
 			if err != nil {
 				log.Printf("[%s] Failed to read image bytes: %v", buildStamp, err)
+				saveErrorObject(event.S3.Bucket.Name, event.S3.Object.Key, decodedKey)
 				continue
 			}
 
@@ -198,13 +208,12 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 			tstamp, err := getImgTimeStamp(imageBytes)
 			if err != nil {
 				log.Printf("[%s] failed to obtain timestamp: %v", buildStamp, err)
+				saveErrorObject(event.S3.Bucket.Name, event.S3.Object.Key, decodedKey)
 				continue
 			}
 
 			// use the EXIF timestamp and the supplied key to create a destination key
 			newKey := makeNewKey(decodedKey, tstamp)
-
-			// errKey := makeErrKey(decodedKey)
 
 			// move the original object to it's new location
 			if err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey); err != nil {
