@@ -155,6 +155,32 @@ func Test_makeNewKey(t *testing.T) {
 	}
 }
 
+func Test_makeErrKey(t *testing.T) {
+	type args struct {
+		key    string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{name: "simple", args: args{key: "import/fred"}, want: "errors/fred"},
+		{name: "robert", args: args{key: "import/robert/img2.jpg"}, want: "errors/robert/img2.jpg"},
+		{name: "delia", args: args{key: "import/delia/img1.jpg"}, want: "errors/delia/img1.jpg"},
+		{name: "complex", args: args{key: "import/folder/subfolder/mary"}, want: "errors/folder/subfolder/mary"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := makeErrKey(tt.args.key); got != tt.want {
+				t.Errorf("extractName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+}
+
 func Test_getImageReader(t *testing.T) {
 	mock := mockS3{}
 	_, err := getImageReader(&mock, "bucket", "key/good.jpeg")

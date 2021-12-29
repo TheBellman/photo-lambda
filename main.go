@@ -19,6 +19,7 @@ import (
 
 type runtimeParameters struct {
 	SourcePrefix      string
+	ErrorPrefix       string
 	DestinationPrefix string
 	DestinationBucket string
 	Region            string
@@ -41,6 +42,7 @@ var buildStamp string
 const (
 	DefaultRegion      = "eu-west-2"
 	DefaultSrcPrefix   = "import/"
+	DefaultErrPrefix   = "errors/"
 	DefaultDestPrefix  = "photos/"
 	DefaultBucket      = "NOSUCHBUCKET"
 	JPEG               = "image/jpeg"
@@ -51,6 +53,7 @@ func init() {
 	params = &runtimeParameters{
 		SourcePrefix:      validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
+		ErrorPrefix:	   validatePrefix(os.Getenv("ERROR_PREFIX"), DefaultErrPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
 	}
@@ -92,6 +95,11 @@ func makeNewKey(key string, tstamp *time.Time) string {
 	var dir, name = filepath.Split(key)
 	dir = strings.TrimPrefix(dir, params.SourcePrefix)
 	return params.DestinationPrefix + dir + tstamp.Format("2006/01/02/") + name
+}
+
+// makeErrKey will take an input key and from it generate an error key
+func makeErrKey(key string) string {
+	return strings.Replace(filepath.Clean(key), params.SourcePrefix, params.ErrorPrefix, 1)
 }
 
 // getImageReader tries to get an io.Reader exposing the body of an image given the bucket and key. It will fail
@@ -195,6 +203,8 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 
 			// use the EXIF timestamp and the supplied key to create a destination key
 			newKey := makeNewKey(decodedKey, tstamp)
+
+			// errKey := makeErrKey(decodedKey)
 
 			// move the original object to it's new location
 			if err = moveObject(params.S3service, event.S3.Bucket.Name, event.S3.Object.Key, params.DestinationBucket, newKey); err != nil {
