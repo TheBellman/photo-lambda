@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      golang: latest
+      golang: 1.17
   pre_build:
     commands:
       - echo Build started
