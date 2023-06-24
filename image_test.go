@@ -2,14 +2,13 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
 )
 
 func testFile(name string) *[]byte {
-	data, err := ioutil.ReadAll(testFileReader(name))
+	data, err := io.ReadAll(testFileReader(name))
 	if err != nil {
 		log.Fatalf("Failed to read %s", name)
 	}
@@ -36,6 +35,16 @@ func Test_getImage(t *testing.T) {
 
 func Test_getImgTimeStamp(t *testing.T) {
 	tstamp, err := getImgTimeStamp(testFile("./test.jpeg"))
+	if err != nil {
+		t.Errorf("Failed to extract timestamp: %v", err)
+	}
+	if tstamp == nil {
+		t.Errorf("Received a nil timestamp")
+	}
+}
+
+func Test_getRawTimeStamp(t *testing.T) {
+	tstamp, err := getImgTimeStamp(testFile("./test.CR3"))
 	if err != nil {
 		t.Errorf("Failed to extract timestamp: %v", err)
 	}

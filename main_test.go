@@ -78,11 +78,11 @@ func Test_validateDestination(t *testing.T) {
 	}
 }
 
-
 type mockS3 struct{}
 
 var jpegMime = "image/jpeg"
 var txtMime = "text/plain"
+var octetMime = "binary/octet-stream"
 
 func (f *mockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
 	return &s3.PutObjectOutput{}, nil
@@ -124,6 +124,13 @@ func (f *mockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error
 		}, nil
 	}
 
+	if *input.Key == "key/test.CR3" {
+		return &s3.GetObjectOutput{
+			ContentType: &octetMime,
+			Body:        testFileReader("./test.CR3"),
+		}, nil
+	}
+
 	return nil, errors.New("unexpected test key provided")
 }
 
@@ -157,7 +164,7 @@ func Test_makeNewKey(t *testing.T) {
 
 func Test_makeErrKey(t *testing.T) {
 	type args struct {
-		key    string
+		key string
 	}
 
 	tests := []struct {
@@ -192,6 +199,11 @@ func Test_getImageReader(t *testing.T) {
 	if err == nil {
 		t.Errorf("Did not get an error when expected")
 	}
+
+	_, err = getImageReader(&mock, "bucket", "key/test.CR3")
+	if err != nil {
+		t.Errorf("Received an unexpected error: %v", err)
+	}
 }
 
 func Test_moveObject(t *testing.T) {
@@ -219,5 +231,4 @@ func Test_moveObject(t *testing.T) {
 	if err != nil {
 		t.Errorf("Got an unexpected error for the no-fail case: %v", err)
 	}
-
 }

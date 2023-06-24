@@ -40,12 +40,12 @@ var params *runtimeParameters
 var buildStamp string
 
 const (
-	DefaultRegion      = "eu-west-2"
-	DefaultSrcPrefix   = "import/"
-	DefaultErrPrefix   = "errors/"
-	DefaultDestPrefix  = "photos/"
-	DefaultBucket      = "NOSUCHBUCKET"
-	JPEG               = "image/jpeg"
+	DefaultRegion     = "eu-west-2"
+	DefaultSrcPrefix  = "import/"
+	DefaultErrPrefix  = "errors/"
+	DefaultDestPrefix = "photos/"
+	DefaultBucket     = "NOSUCHBUCKET"
+	JPEG              = "image/jpeg"
 )
 
 func init() {
@@ -53,7 +53,7 @@ func init() {
 	params = &runtimeParameters{
 		SourcePrefix:      validatePrefix(os.Getenv("SOURCE_PREFIX"), DefaultSrcPrefix),
 		DestinationPrefix: validatePrefix(os.Getenv("DESTINATION_PREFIX"), DefaultDestPrefix),
-		ErrorPrefix:	   validatePrefix(os.Getenv("ERROR_PREFIX"), DefaultErrPrefix),
+		ErrorPrefix:       validatePrefix(os.Getenv("ERROR_PREFIX"), DefaultErrPrefix),
 		DestinationBucket: validateDestination(os.Getenv("DESTINATION_BUCKET")),
 		Region:            validateRegion(os.Getenv("AWS_REGION")),
 	}
@@ -103,7 +103,7 @@ func makeErrKey(key string) string {
 }
 
 // getImageReader tries to get an io.Reader exposing the body of an image given the bucket and key. It will fail
-// if the provided object is not a JPEG
+// if the provided object is not a supported file type
 func getImageReader(service s3Service, bucket string, key string) (io.Reader, error) {
 	result, err := service.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
@@ -113,11 +113,12 @@ func getImageReader(service s3Service, bucket string, key string) (io.Reader, er
 		return nil, fmt.Errorf("error fetching from s3: %v", err)
 	}
 
-	if *result.ContentType != JPEG {
-		return nil, fmt.Errorf("only JPEG supported, fetched file was reported as %s", *result.ContentType)
+	if strings.HasSuffix(strings.ToLower(key), ".cr3") || *result.ContentType == JPEG {
+		return result.Body, nil
 	}
-
-	return result.Body, nil
+	return nil, fmt.Errorf("only JPEG and CR3 supported, fetched file %s was reported as %s",
+		key,
+		*result.ContentType)
 }
 
 // moveObject uses the supplied service to move an object from a source bucket/key to a destination bucket/key
@@ -181,7 +182,6 @@ func HandleLambdaEvent(request events.S3Event) (int, error) {
 				log.Printf("[%s] Failed to decode the key: '%s'", buildStamp, event.S3.Object.Key)
 				continue
 			}
-
 
 			// this should be a cannot-happen case
 			if event.AWSRegion != params.Region {
