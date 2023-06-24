@@ -7,6 +7,7 @@ phases:
   pre_build:
     commands:
       - echo Build started
+      - go mod download github.com/aws/aws-lambda-go
       - go test
   build:
     commands:
