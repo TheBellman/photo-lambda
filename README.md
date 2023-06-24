@@ -1,10 +1,13 @@
 # photo-lambda
 
-This code provides the file-and-resize operation for the photo archive.
+This code provides the catalog operation for the photo archive.
+
+For CR3 (Canon RAW) and JPEG files, it will try to figure out the timestamp on the file (i.e. when the
+photo was taken) and move the incoming files to the archive bucket under prefix/year/month/day/filename
 
 ## Building
 
-Assuming go 1.15 or better is installed:
+Assuming go 1.20.5 or better is installed:
 
 ```
 % go test
@@ -12,7 +15,7 @@ Assuming go 1.15 or better is installed:
 ```
 
 ## License
-Copyright 2020 Little Dog Digital
+Copyright 2022 Little Dog Digital
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
 file except in compliance with the License. You may obtain a copy of the License at

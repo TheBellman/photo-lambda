@@ -2,14 +2,13 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
 )
 
 func testFile(name string) *[]byte {
-	data, err := ioutil.ReadAll(testFileReader(name))
+	data, err := io.ReadAll(testFileReader(name))
 	if err != nil {
 		log.Fatalf("Failed to read %s", name)
 	}
@@ -44,13 +43,12 @@ func Test_getImgTimeStamp(t *testing.T) {
 	}
 }
 
-func Test_resizeImage(t *testing.T) {
-	img, err := resizeImage(testFile("./IMG_0348.jpeg"))
+func Test_getRawTimeStamp(t *testing.T) {
+	tstamp, err := getImgTimeStamp(testFile("./test.CR3"))
 	if err != nil {
-		t.Errorf("failed to resize image: %v", err)
+		t.Errorf("Failed to extract timestamp: %v", err)
 	}
-
-	if img == nil || len(*img) == 0 {
-		t.Error("did not receive an image when it was expected")
+	if tstamp == nil {
+		t.Errorf("Received a nil timestamp")
 	}
 }
