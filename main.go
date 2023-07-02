@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"io"
 	"log"
 	"net/url"
 	"os"
@@ -46,6 +45,7 @@ const (
 	DefaultDestPrefix = "photos/"
 	DefaultBucket     = "NOSUCHBUCKET"
 	JPEG              = "image/jpeg"
+	HEIC              = "image/heic"
 )
 
 func init() {
@@ -100,25 +100,6 @@ func makeNewKey(key string, tstamp *time.Time) string {
 // makeErrKey will take an input key and from it generate an error key
 func makeErrKey(key string) string {
 	return strings.Replace(filepath.Clean(key), params.SourcePrefix, params.ErrorPrefix, 1)
-}
-
-// getImageReader tries to get an io.Reader exposing the body of an image given the bucket and key. It will fail
-// if the provided object is not a supported file type
-func getImageReader(service s3Service, bucket string, key string) (io.Reader, error) {
-	result, err := service.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error fetching from s3: %v", err)
-	}
-
-	if strings.HasSuffix(strings.ToLower(key), ".cr3") || *result.ContentType == JPEG {
-		return result.Body, nil
-	}
-	return nil, fmt.Errorf("only JPEG and CR3 supported, fetched file %s was reported as %s",
-		key,
-		*result.ContentType)
 }
 
 // moveObject uses the supplied service to move an object from a source bucket/key to a destination bucket/key

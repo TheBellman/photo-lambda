@@ -83,6 +83,7 @@ type mockS3 struct{}
 var jpegMime = "image/jpeg"
 var txtMime = "text/plain"
 var octetMime = "binary/octet-stream"
+var heicMime = "image/heic"
 
 func (f *mockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
 	return &s3.PutObjectOutput{}, nil
@@ -128,6 +129,13 @@ func (f *mockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error
 		return &s3.GetObjectOutput{
 			ContentType: &octetMime,
 			Body:        testFileReader("./test.CR3"),
+		}, nil
+	}
+
+	if *input.Key == "key/test.HEIC" {
+		return &s3.GetObjectOutput{
+			ContentType: &heicMime,
+			Body:        testFileReader("./test.HEIC"),
 		}, nil
 	}
 
@@ -186,24 +194,6 @@ func Test_makeErrKey(t *testing.T) {
 		})
 	}
 
-}
-
-func Test_getImageReader(t *testing.T) {
-	mock := mockS3{}
-	_, err := getImageReader(&mock, "bucket", "key/good.jpeg")
-	if err != nil {
-		t.Errorf("Received an unexpected error: %v", err)
-	}
-
-	_, err = getImageReader(&mock, "bucket", "key/bad.jpeg")
-	if err == nil {
-		t.Errorf("Did not get an error when expected")
-	}
-
-	_, err = getImageReader(&mock, "bucket", "key/test.CR3")
-	if err != nil {
-		t.Errorf("Received an unexpected error: %v", err)
-	}
 }
 
 func Test_moveObject(t *testing.T) {
