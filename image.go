@@ -39,7 +39,7 @@ func getImageReader(service s3Service, bucket string, key string) (io.Reader, er
 		*result.ContentType == JPEG {
 		return result.Body, nil
 	}
-	return nil, fmt.Errorf("only JPEG and CR3 supported, fetched file %s was reported as %s",
+	return nil, fmt.Errorf("only JPEG, CR3  and HEIC supported, fetched file %s was reported as %s",
 		key,
 		*result.ContentType)
 }
