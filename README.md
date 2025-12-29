@@ -14,6 +14,14 @@ Assuming go 1.20.5 or better is installed:
 % CGO_ENABLED=0 go build -o bootstrap ./cmd/photo-lambda
 ```
 
+## Pre-Commit hook
+To use the pre-commit hook, first install pre-commit, then install the hook:
+
+```
+% brew install pre-commit
+% pre-commit install
+```
+
 ## License
 
 Copyright 2022 Little Dog Digital
