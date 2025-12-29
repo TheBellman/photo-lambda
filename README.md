@@ -10,8 +10,16 @@ photo was taken) and move the incoming files to the archive bucket under prefix/
 Assuming go 1.20.5 or better is installed:
 
 ```
-% go test
-% go build
+% CGO_ENABLED=0 go test ./...
+% CGO_ENABLED=0 go build -o bootstrap ./cmd/photo-lambda
+```
+
+## Pre-Commit hook
+To use the pre-commit hook, first install pre-commit, then install the hook:
+
+```
+% brew install pre-commit
+% pre-commit install
 ```
 
 ## License
