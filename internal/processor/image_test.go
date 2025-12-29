@@ -5,31 +5,43 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/TheBellman/photo-lambda/internal/testutils"
 )
 
 func testFile(name string) *[]byte {
-	data, err := io.ReadAll(testFileReader(name))
+	data, err := io.ReadAll(mustOpenFile(name))
 	if err != nil {
 		log.Fatalf("Failed to read %s", name)
 	}
 	return &data
 }
 
-func testFileReader(name string) io.ReadCloser {
-	f, err := os.Open(name)
+func testFileReader(name string) (io.ReadCloser, error) {
+	path := filepath.Join("..", "..", "testdata", name)
+	f, err := os.Open(path)
 	if err != nil {
-		log.Fatalf("Failed to open %s", name)
+		return nil, err
+	}
+	return f, nil
+}
+
+// Updated helper for tests that expect the file to definitely exist
+func mustOpenFile(name string) io.ReadCloser {
+	f, err := testFileReader(name)
+	if err != nil {
+		log.Fatalf("Failed to open %s: %v", name, err)
 	}
 	return f
 }
 
 func Test_getImage(t *testing.T) {
-	keys := []string{"../../testdata/test.jpeg", "../../testdata/test.CR3", "../../testdata/test.HEIC"}
+	keys := []string{"test.jpeg", "test.CR3", "test.HEIC"}
 	for _, key := range keys {
-		data, err := GetImage(testFileReader(key))
+		data, err := GetImage(mustOpenFile(key))
 		if err != nil {
 			t.Errorf("unexpected error loading file: %v", err)
 		}
@@ -40,7 +52,7 @@ func Test_getImage(t *testing.T) {
 }
 
 func Test_getImgTimeStamp(t *testing.T) {
-	keys := []string{"../../testdata/test.jpeg", "../../testdata/test.CR3", "../../testdata/test.HEIC"}
+	keys := []string{"test.jpeg", "test.CR3", "test.HEIC"}
 	for _, key := range keys {
 		tstamp, err := GetImgTimeStamp(testFile(key))
 		if err != nil {
@@ -54,9 +66,9 @@ func Test_getImgTimeStamp(t *testing.T) {
 }
 
 func Test_getImageReader(t *testing.T) {
-	// Pass the local testFileReader to the mock
+	// FIX: Use testFileReader here, because the mock expects the (io.ReadCloser, error) signature
 	mock := testutils.MockS3{TestDataReader: testFileReader}
-	ctx := context.TODO() // Create test context
+	ctx := context.TODO()
 
 	keys := []string{"key/good.jpeg", "key/test.CR3", "key/test.HEIC"}
 
@@ -65,11 +77,22 @@ func Test_getImageReader(t *testing.T) {
 		if err != nil {
 			t.Errorf("Received an unexpected error: %v", err)
 		}
+	}
+}
 
+func Test_GetImageReader_FileNotFound(t *testing.T) {
+	mock := testutils.MockS3{TestDataReader: testFileReader}
+	ctx := context.TODO()
+
+	// This key is NOT in the MockS3 switch, so it triggers the 'default' error
+	_, err := GetImageReader(ctx, &mock, "bucket", "missing-file.jpg")
+
+	if err == nil {
+		t.Fatal("Expected an error for a non-existent file, but got nil")
 	}
 
-	_, err := GetImageReader(ctx, &mock, "bucket", "key/bad.jpeg")
-	if err == nil {
-		t.Errorf("Did not get an error when expected")
+	expectedError := "unexpected test key provided: missing-file.jpg"
+	if !strings.Contains(err.Error(), "unexpected test key") {
+		t.Errorf("Expected error message to contain '%s', but got: %v", expectedError, err)
 	}
 }

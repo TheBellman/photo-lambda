@@ -2,7 +2,6 @@ package main
 
 import (
 	"context" // Ensure this is imported
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,15 +12,14 @@ import (
 )
 
 // getTestDataReader helps find the test files relative to this test file
-func getTestDataReader(name string) io.ReadCloser {
+func getTestDataReader(name string) (io.ReadCloser, error) {
 	// Relative path from cmd/photo-lambda/ to testdata/
 	path := filepath.Join("..", "..", "testdata", name)
 	f, err := os.Open(path)
 	if err != nil {
-		// Using panic in test setup is okay if the files are mandatory
-		panic(fmt.Sprintf("failed to open test file %s: %v", path, err))
+		return nil, err
 	}
-	return f
+	return f, nil
 }
 
 func Test_validateRegion(t *testing.T) {

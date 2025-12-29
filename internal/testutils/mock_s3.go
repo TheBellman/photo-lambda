@@ -11,7 +11,8 @@ import (
 
 // MockS3 must satisfy processor.S3Service using SDK v2 signatures
 type MockS3 struct {
-	TestDataReader func(name string) io.ReadCloser
+	// Update this signature
+	TestDataReader func(name string) (io.ReadCloser, error)
 }
 
 func (m *MockS3) GetObject(ctx context.Context, input *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
@@ -36,13 +37,14 @@ func (m *MockS3) GetObject(ctx context.Context, input *s3.GetObjectInput, optFns
 		return nil, fmt.Errorf("unexpected test key provided: %s", key)
 	}
 
-	if m.TestDataReader == nil {
-		return nil, fmt.Errorf("mock error: TestDataReader not initialized")
+	body, err := m.TestDataReader(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("mock failed to load file: %v", err)
 	}
 
 	return &s3.GetObjectOutput{
 		ContentType: &mime,
-		Body:        m.TestDataReader(fileName),
+		Body:        body,
 	}, nil
 }
 
