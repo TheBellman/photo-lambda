@@ -1,67 +1,70 @@
 package testutils
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+// MockS3 must satisfy processor.S3Service using SDK v2 signatures
 type MockS3 struct {
 	TestDataReader func(name string) io.ReadCloser
 }
 
-func (m *MockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+func (m *MockS3) GetObject(ctx context.Context, input *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
 	key := *input.Key
 	var mime string
-	var filePath string
+	var fileName string
 
 	switch {
 	case strings.Contains(key, "good.jpeg") || strings.Contains(key, "test.jpeg"):
 		mime = "image/jpeg"
-		filePath = filepath.Join("..", "..", "testdata", "test.jpeg")
+		fileName = "test.jpeg"
 	case strings.Contains(key, "test.CR3"):
 		mime = "binary/octet-stream"
-		filePath = filepath.Join("..", "..", "testdata", "test.CR3")
+		fileName = "test.CR3"
 	case strings.Contains(key, "test.HEIC"):
 		mime = "image/heic"
-		filePath = filepath.Join("..", "..", "testdata", "test.HEIC")
+		fileName = "test.HEIC"
 	case strings.Contains(key, "bad.jpeg"):
 		mime = "text/plain"
-		filePath = filepath.Join("..", "..", "testdata", "test.jpeg")
+		fileName = "test.jpeg"
 	default:
-		return nil, fmt.Errorf("unexpected test key: %s", key)
+		return nil, fmt.Errorf("unexpected test key provided: %s", key)
+	}
+
+	if m.TestDataReader == nil {
+		return nil, fmt.Errorf("mock error: TestDataReader not initialized")
 	}
 
 	return &s3.GetObjectOutput{
 		ContentType: &mime,
-		Body:        m.TestDataReader(filePath),
+		Body:        m.TestDataReader(fileName),
 	}, nil
 }
 
-func (m *MockS3) CopyObject(input *s3.CopyObjectInput) (*s3.CopyObjectOutput, error) {
+func (m *MockS3) CopyObject(ctx context.Context, input *s3.CopyObjectInput, optFns ...func(*s3.Options)) (*s3.CopyObjectOutput, error) {
 	if strings.Contains(*input.Key, "case1") {
-		return nil, fmt.Errorf("copy failed")
+		return nil, fmt.Errorf("simulated copy failure")
 	}
 	return &s3.CopyObjectOutput{}, nil
 }
 
-func (m *MockS3) WaitUntilObjectExists(input *s3.HeadObjectInput) error {
-	if strings.Contains(*input.Key, "case2") {
-		return fmt.Errorf("wait failed")
-	}
-	return nil
-}
-
-func (m *MockS3) DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
+func (m *MockS3) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
 	if strings.Contains(*input.Key, "case3") {
-		return nil, fmt.Errorf("delete failed")
+		return nil, fmt.Errorf("simulated delete failure")
 	}
 	return &s3.DeleteObjectOutput{}, nil
 }
 
-func (m *MockS3) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
+// Ensure these match whatever is in your S3Service interface
+func (m *MockS3) PutObject(ctx context.Context, input *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
 	return &s3.PutObjectOutput{}, nil
 }
+
+// Note: v2 SDK doesn't have WaitUntilObjectExists on the client.
+// If your S3Service interface still includes it, you'll need to decide
+// whether to keep it or use the v2 Waiter pattern.

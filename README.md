@@ -10,8 +10,8 @@ photo was taken) and move the incoming files to the archive bucket under prefix/
 Assuming go 1.20.5 or better is installed:
 
 ```
-% go test
-% go build
+% CGO_ENABLED=0 go test ./...
+% CGO_ENABLED=0 go build -o bootstrap ./cmd/photo-lambda
 ```
 
 ## License

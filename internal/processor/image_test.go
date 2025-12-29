@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context" // Add this
 	"io"
 	"log"
 	"os"
@@ -55,18 +56,19 @@ func Test_getImgTimeStamp(t *testing.T) {
 func Test_getImageReader(t *testing.T) {
 	// Pass the local testFileReader to the mock
 	mock := testutils.MockS3{TestDataReader: testFileReader}
+	ctx := context.TODO() // Create test context
 
 	keys := []string{"key/good.jpeg", "key/test.CR3", "key/test.HEIC"}
 
 	for _, key := range keys {
-		_, err := GetImageReader(&mock, "bucket", key)
+		_, err := GetImageReader(ctx, &mock, "bucket", key)
 		if err != nil {
 			t.Errorf("Received an unexpected error: %v", err)
 		}
 
 	}
 
-	_, err := GetImageReader(&mock, "bucket", "key/bad.jpeg")
+	_, err := GetImageReader(ctx, &mock, "bucket", "key/bad.jpeg")
 	if err == nil {
 		t.Errorf("Did not get an error when expected")
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context" // Ensure this is imported
 	"fmt"
 	"io"
 	"os"
@@ -95,27 +96,28 @@ func Test_validateDestination(t *testing.T) {
 
 func Test_moveObject(t *testing.T) {
 	mock := &testutils.MockS3{TestDataReader: getTestDataReader}
+	ctx := context.TODO() // Create a test context
 
 	// case 1 - copy failed, expect error
-	err := moveObject(mock, "sourceBucket", "sourceKey", "destBucket", "case1")
+	err := moveObject(ctx, mock, "sourceBucket", "sourceKey", "destBucket", "case1")
 	if err == nil {
 		t.Errorf("Did not get an error for copy failure when one was expected")
 	}
 
-	// case 2 - wait failed, expect error
-	err = moveObject(mock, "sourceBucket", "sourceKey", "destBucket", "case2")
-	if err == nil {
-		t.Errorf("Did not get an error for wait failure when one was expected")
-	}
+	// case 2 - wait failed, expect error (note that from 29/12/25 the wait is not implemented
+	//err = moveObject(ctx, mock, "sourceBucket", "sourceKey", "destBucket", "case2")
+	//if err == nil {
+	//	t.Errorf("Did not get an error for wait failure when one was expected")
+	//}
 
 	// case 3 - delete failed, expect error
-	err = moveObject(mock, "sourceBucket", "case3", "destBucket", "destKey")
+	err = moveObject(ctx, mock, "sourceBucket", "case3", "destBucket", "destKey")
 	if err == nil {
 		t.Errorf("Did not get an error for delete failure when one was expected")
 	}
 
 	// case 4 - no failures, expect no errors
-	err = moveObject(mock, "sourceBucket", "sourceKey", "destBucket", "case4")
+	err = moveObject(ctx, mock, "sourceBucket", "sourceKey", "destBucket", "case4")
 	if err != nil {
 		t.Errorf("Got an unexpected error for the no-fail case: %v", err)
 	}
@@ -160,7 +162,7 @@ func Test_makeErrKey(t *testing.T) {
 		SourcePrefix: DefaultSrcPrefix, // "import/"
 		ErrorPrefix:  DefaultErrPrefix, // "errors/"
 	}
-	
+
 	type args struct {
 		key string
 	}
