@@ -1,8 +1,6 @@
-name: Go Build and Deploy
+name: CI - Test and Verify
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -23,42 +21,9 @@ jobs:
           CGO_ENABLED: 0
         run: go test -v ./...
 
-      - name: Build Binary
+      - name: Verify Build
         env:
           GOARCH: arm64
           GOOS: linux
           CGO_ENABLED: 0
-        run: |
-          go mod download
-          go build -o bootstrap ./cmd/photo-lambda
-          zip function.zip bootstrap
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lambda-package
-          path: function.zip
-
-# Ask JetBrains AI how to use OIDC instead of credentials like this
-#  deploy:
-#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-#    needs: build
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Download Artifact
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: lambda-package
-#
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: us-east-1 # Change to your region
-#
-#      - name: Deploy to Lambda
-#        run: |
-#          aws lambda update-function-code \
-#            --function-name YourLambdaFunctionName \
-#            --zip-file fileb://function.zip
+        run:  go build -o bootstrap ./cmd/photo-lambda
