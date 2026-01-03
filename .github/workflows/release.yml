@@ -23,35 +23,21 @@ jobs:
           CGO_ENABLED: 0
         run: |
           go build -o bootstrap ./cmd/photo-lambda
-          zip function.zip bootstrap
+          zip photo-lambda-${{ github.event.release.tag_name }}.zip bootstrap
 
       - name: Upload Production Artifact
         uses: actions/upload-artifact@v4
         with:
           name: photo-lambda-release
-          path: function.zip
+          path: photo-lambda-${{ github.event.release.tag_name }}.zip
 
 
-# Ask JetBrains AI how to use OIDC instead of credentials like this
-#  deploy:
-#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-#    needs: build
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Download Artifact
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: lambda-package
-#
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: us-east-1 # Change to your region
-#
-#      - name: Deploy to Lambda
-#        run: |
-#          aws lambda update-function-code \
-#            --function-name YourLambdaFunctionName \
-#            --zip-file fileb://function.zip
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Upload ZIP to S3
+        run: aws s3 cp function.zip s3://${{ vars.BUCKET }}/photo-lambda/photo-lambda-${{ github.event.release.tag_name }}.zip
