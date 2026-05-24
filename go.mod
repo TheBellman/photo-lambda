@@ -3,11 +3,13 @@ module github.com/TheBellman/photo-lambda
 go 1.26
 
 require (
+	github.com/FlavioCFOliveira/GoMetadata v1.0.4
 	github.com/aws/aws-lambda-go v1.54.0
 	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/aws/aws-sdk-go-v2/config v1.32.18
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/evanoberholster/imagemeta v1.0.0
+	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 )
 
 require (

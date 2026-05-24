@@ -1,4 +1,8 @@
-// main provides a Lambda function used to archive and manipulate the photo stream
+// main provides a Lambda function used to archive and manipulate the photo stream.
+// This function will try to archive any file it's told about, so it relies on the
+// notification configuration to filter for only certain files. It does however
+// treat *.ORF files differently to other files, as the mechanism for digging
+// the photo date out for those is different than HEIC, JPEG and CR3 files.
 package main
 
 import (
@@ -91,7 +95,7 @@ func HandleLambdaEvent(ctx context.Context, request events.S3Event) (int, error)
 			}
 
 			// try to get the EXIF timestamp for the object
-			tstamp, err := processor.GetImgTimeStamp(imageBytes)
+			tstamp, err := processor.GetImgTimeStamp(imageBytes, decodedKey)
 			if err != nil {
 				log.Printf("[%s] failed to obtain timestamp: %v", buildStamp, err)
 				if err := s3utils.SaveErrorObject(ctx, params.S3Client, s3Config, event.S3.Bucket.Name, event.S3.Object.Key, decodedKey); err != nil {

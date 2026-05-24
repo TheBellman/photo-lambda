@@ -52,16 +52,33 @@ func Test_getImage(t *testing.T) {
 }
 
 func Test_getImgTimeStamp(t *testing.T) {
-	keys := []string{"test.jpeg", "test.CR3", "test.HEIC"}
-	for _, key := range keys {
-		tstamp, err := GetImgTimeStamp(testFile(key))
-		if err != nil {
-			t.Errorf("Failed to extract timestamp: %v", err)
-		}
-		if tstamp == nil {
-			t.Errorf("Received a nil timestamp")
-		}
+	tests := []struct {
+		key          string
+		expectedTime string
+	}{
+		{"test.jpeg", "2006-06-20 00:46:21"},
+		{"test.CR3", "2022-04-02 08:18:55"},
+		{"test.HEIC", "2022-09-30 18:06:02"},
+		{"test.ORF", "2024-06-09 13:52:20"},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			tstamp, err := GetImgTimeStamp(testFile(tt.key), tt.key)
+			if err != nil {
+				t.Errorf("Failed to extract timestamp for %s: %v", tt.key, err)
+				return
+			}
+			if tstamp == nil {
+				t.Errorf("Received a nil timestamp for %s", tt.key)
+				return
+			}
+
+			actualTime := tstamp.Format("2006-01-02 15:04:05")
+			if actualTime != tt.expectedTime {
+				t.Errorf("For %s, expected timestamp %s, but got %s", tt.key, tt.expectedTime, actualTime)
+			}
+		})
 	}
 }
 
