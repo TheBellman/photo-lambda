@@ -12,11 +12,6 @@ import (
 	"github.com/evanoberholster/imagemeta"
 )
 
-const (
-	JPEG = "image/jpeg"
-	HEIC = "image/heic"
-)
-
 // S3Service updated for v2 signatures
 type S3Service interface {
 	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
