@@ -56,13 +56,13 @@ func GetImgTimeStamp(image *[]byte) (*time.Time, error) {
 		return nil, err
 	}
 
-	if !metaData.DateTimeOriginal().IsZero() {
-		t := metaData.DateTimeOriginal()
+	if !metaData.OriginalDate().IsZero() {
+		t := metaData.OriginalDate()
 		return &t, nil
 	}
 
-	if !metaData.CreateDate().IsZero() {
-		t := metaData.CreateDate()
+	if !metaData.DigitizedDate().IsZero() {
+		t := metaData.DigitizedDate()
 		return &t, nil
 	}
 
