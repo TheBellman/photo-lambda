@@ -4,3 +4,8 @@
 **/*key
 
 **/*.zip
+photo-lambda
+bootstrap
+
+# Go vendor directory
+vendor/
